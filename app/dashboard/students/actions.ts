@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
-type StudentInput = { name: string; nisn: string; photo?: string };
+type StudentInput = { name: string; className: string; attendanceNumber: string; nis: string; nisn: string; phone?: string; address?: string; photo?: string };
 type ActionResult = { ok: true } | { ok: false; message: string };
 
 async function validateUser() {
@@ -15,11 +15,19 @@ async function validateUser() {
 
 function validateStudentInput(input: StudentInput): string | null {
   const name = input.name.trim();
+  const className = input.className.trim();
+  const attendanceNumber = Number(input.attendanceNumber.trim());
+  const nis = input.nis.trim();
   const nisn = input.nisn.trim();
+  const phone = input.phone?.trim() ?? "";
   const photo = input.photo?.trim() ?? "";
 
   if (name.length < 2) return "Nama siswa minimal terdiri dari 2 karakter.";
+  if (!className) return "Kelas wajib diisi.";
+  if (!Number.isInteger(attendanceNumber) || attendanceNumber < 1) return "Nomor absen harus berupa angka positif.";
+  if (!/^\d+$/.test(nis)) return "NIS hanya boleh berisi angka.";
   if (!/^\d+$/.test(nisn)) return "NISN hanya boleh berisi angka.";
+  if (phone && !/^[+\d][+\d\s-]*$/.test(phone)) return "Nomor telepon tidak valid.";
   if (photo && !/^https?:\/\//i.test(photo)) return "URL foto harus diawali http:// atau https://.";
   return null;
 }
@@ -27,7 +35,12 @@ function validateStudentInput(input: StudentInput): string | null {
 function getInput(formData: FormData): StudentInput {
   return {
     name: String(formData.get("name") ?? ""),
+    className: String(formData.get("className") ?? ""),
+    attendanceNumber: String(formData.get("attendanceNumber") ?? ""),
+    nis: String(formData.get("nis") ?? ""),
     nisn: String(formData.get("nisn") ?? ""),
+    phone: String(formData.get("phone") ?? ""),
+    address: String(formData.get("address") ?? ""),
     photo: String(formData.get("photo") ?? ""),
   };
 }
@@ -41,13 +54,15 @@ export async function createStudent(formData: FormData): Promise<ActionResult> {
 
   try {
     await prisma.student.create({
-      data: { name: input.name.trim(), nisn: input.nisn.trim(), photo: input.photo?.trim() || null },
+      data: { name: input.name.trim(), className: input.className.trim(), attendanceNumber: Number(input.attendanceNumber), nis: input.nis.trim(), nisn: input.nisn.trim(), phone: input.phone?.trim() || null, address: input.address?.trim() || null, photo: input.photo?.trim() || null },
     });
     revalidatePath("/dashboard/students");
+    revalidatePath("/dashboard");
     return { ok: true };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      return { ok: false, message: "NISN tersebut sudah digunakan oleh siswa lain." };
+      const target = (error.meta as { target?: string[] } | undefined)?.target ?? [];
+      return { ok: false, message: target.includes("nis") ? "NIS tersebut sudah digunakan oleh siswa lain." : "NISN tersebut sudah digunakan oleh siswa lain." };
     }
     return { ok: false, message: "Siswa belum dapat ditambahkan. Silakan coba lagi." };
   }
@@ -65,13 +80,15 @@ export async function updateStudent(formData: FormData): Promise<ActionResult> {
   try {
     await prisma.student.update({
       where: { id },
-      data: { name: input.name.trim(), nisn: input.nisn.trim(), photo: input.photo?.trim() || null },
+      data: { name: input.name.trim(), className: input.className.trim(), attendanceNumber: Number(input.attendanceNumber), nis: input.nis.trim(), nisn: input.nisn.trim(), phone: input.phone?.trim() || null, address: input.address?.trim() || null, photo: input.photo?.trim() || null },
     });
     revalidatePath("/dashboard/students");
+    revalidatePath("/dashboard");
     return { ok: true };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      return { ok: false, message: "NISN tersebut sudah digunakan oleh siswa lain." };
+      const target = (error.meta as { target?: string[] } | undefined)?.target ?? [];
+      return { ok: false, message: target.includes("nis") ? "NIS tersebut sudah digunakan oleh siswa lain." : "NISN tersebut sudah digunakan oleh siswa lain." };
     }
     return { ok: false, message: "Siswa belum dapat diperbarui. Silakan coba lagi." };
   }
@@ -86,6 +103,7 @@ export async function deleteStudent(formData: FormData): Promise<ActionResult> {
   try {
     await prisma.student.delete({ where: { id } });
     revalidatePath("/dashboard/students");
+    revalidatePath("/dashboard");
     return { ok: true };
   } catch {
     return { ok: false, message: "Siswa belum dapat dihapus. Silakan coba lagi." };

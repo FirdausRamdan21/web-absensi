@@ -20,13 +20,18 @@ model User {
 }
 
 model Student {
-  id          String       @id @default(uuid())
-  nisn        String       @unique
-  name        String
-  photo       String?      
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  attendances Attendance[]
+  id                String       @id @default(uuid())
+  name              String
+  className         String
+  attendanceNumber  Int
+  nis               String       @unique
+  nisn              String       @unique
+  phone             String?
+  address           String?
+  photo             String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  attendances       Attendance[]
 }
 
 model Attendance {
