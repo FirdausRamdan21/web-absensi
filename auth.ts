@@ -13,10 +13,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const username = typeof credentials?.username === "string" ? credentials.username.trim() : "";
+        const username = typeof credentials?.username === "string" ? credentials.username.trim().toLowerCase() : "";
         const password = typeof credentials?.password === "string" ? credentials.password : "";
 
-        if (!username || !password) return null;
+        if (!/^[a-z0-9._-]{3,30}$/.test(username) || password.length < 8 || password.length > 128) return null;
 
         const user = await prisma.user.findUnique({ where: { username } });
         if (!user || !user.isActive) return null;

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
-type StudentInput = { name: string; className: string; attendanceNumber: string; nis: string; nisn: string; phone?: string; address?: string; photo?: string };
+type StudentInput = { name: string; className: string; attendanceNumber: string; nis: string; nisn: string; phone?: string; address?: string };
 type ActionResult = { ok: true } | { ok: false; message: string };
 
 async function validateUser() {
@@ -20,7 +20,6 @@ function validateStudentInput(input: StudentInput): string | null {
   const nis = input.nis.trim();
   const nisn = input.nisn.trim();
   const phone = input.phone?.trim() ?? "";
-  const photo = input.photo?.trim() ?? "";
 
   if (name.length < 2) return "Nama siswa minimal terdiri dari 2 karakter.";
   if (!className) return "Kelas wajib diisi.";
@@ -28,7 +27,6 @@ function validateStudentInput(input: StudentInput): string | null {
   if (!/^\d+$/.test(nis)) return "NIS hanya boleh berisi angka.";
   if (!/^\d+$/.test(nisn)) return "NISN hanya boleh berisi angka.";
   if (phone && !/^[+\d][+\d\s-]*$/.test(phone)) return "Nomor telepon tidak valid.";
-  if (photo && !/^https?:\/\//i.test(photo)) return "URL foto harus diawali http:// atau https://.";
   return null;
 }
 
@@ -41,7 +39,6 @@ function getInput(formData: FormData): StudentInput {
     nisn: String(formData.get("nisn") ?? ""),
     phone: String(formData.get("phone") ?? ""),
     address: String(formData.get("address") ?? ""),
-    photo: String(formData.get("photo") ?? ""),
   };
 }
 
@@ -54,7 +51,7 @@ export async function createStudent(formData: FormData): Promise<ActionResult> {
 
   try {
     await prisma.student.create({
-      data: { name: input.name.trim(), className: input.className.trim(), attendanceNumber: Number(input.attendanceNumber), nis: input.nis.trim(), nisn: input.nisn.trim(), phone: input.phone?.trim() || null, address: input.address?.trim() || null, photo: input.photo?.trim() || null },
+      data: { name: input.name.trim(), className: input.className.trim(), attendanceNumber: Number(input.attendanceNumber), nis: input.nis.trim(), nisn: input.nisn.trim(), phone: input.phone?.trim() || null, address: input.address?.trim() || null },
     });
     revalidatePath("/dashboard/students");
     revalidatePath("/dashboard");
@@ -80,7 +77,7 @@ export async function updateStudent(formData: FormData): Promise<ActionResult> {
   try {
     await prisma.student.update({
       where: { id },
-      data: { name: input.name.trim(), className: input.className.trim(), attendanceNumber: Number(input.attendanceNumber), nis: input.nis.trim(), nisn: input.nisn.trim(), phone: input.phone?.trim() || null, address: input.address?.trim() || null, photo: input.photo?.trim() || null },
+      data: { name: input.name.trim(), className: input.className.trim(), attendanceNumber: Number(input.attendanceNumber), nis: input.nis.trim(), nisn: input.nisn.trim(), phone: input.phone?.trim() || null, address: input.address?.trim() || null },
     });
     revalidatePath("/dashboard/students");
     revalidatePath("/dashboard");
